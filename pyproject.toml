@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agente-documentador"
+version = "0.1.0"
+description = "Agente documentador automatico de proyectos Git usando IA (Gemini)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "google-genai>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Dviper80/Agente-Documentador"
+Repository = "https://github.com/Dviper80/Agente-Documentador.git"
+
+[project.scripts]
+gda-commit = "scripts.doc_commit:main"
+gda-project = "scripts.doc_project:main"
+gda-install = "scripts.install_hook:main"
+gda-setup = "scripts.setup_key:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["scripts*"]

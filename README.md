@@ -21,43 +21,62 @@ Tu proyecto/
 
 ## ⚡ Instalación rápida
 
-### 1. Prerequisitos
+### Opción 1: Instalar directamente con `pip` (Recomendada en cualquier equipo)
 
-Instala la biblioteca oficial de Gemini:
+Puedes instalar la herramienta y sus comandos de consola directamente desde GitHub sin necesidad de clonar manualmente:
 
 ```bash
-pip install -r requirements.txt
-# O alternativamente: pip install google-genai
+pip install git+https://github.com/Dviper80/Agente-Documentador.git
 ```
 
-### 2. Configurar tu API Key de Gemini
+O si prefieres añadirlo a las dependencias de tu proyecto (`requirements.txt`):
+```text
+git+https://github.com/Dviper80/Agente-Documentador.git
+```
 
-Obtén una clave gratuita en [Google AI Studio](https://aistudio.google.com/app/apikey).
-Luego guárdala con el asistente (funciona de forma portable en Windows, Linux y macOS):
+Una vez instalado, dispones de los comandos globales `gda-setup`, `gda-install`, `gda-project` y `gda-commit`.
+
+---
+
+### Opción 2: Clonando el repositorio
 
 ```bash
+git clone https://github.com/Dviper80/Agente-Documentador.git
+cd Agente-Documentador
+pip install -r requirements.txt
+```
+
+---
+
+### Configuración inicial (3 pasos)
+
+#### 1. Configurar tu API Key de Gemini
+Obtén una clave gratuita en [Google AI Studio](https://aistudio.google.com/app/apikey) y guárdala:
+
+```bash
+# Con CLI global:
+gda-setup --key TU_API_KEY
+
+# O con script directo:
 python scripts/setup_key.py --key TU_API_KEY
 ```
 
-> **Nota:** También puedes definirla como variable de entorno (`export GEMINI_API_KEY="tu-clave"` en Linux/macOS o `$env:GEMINI_API_KEY="tu-clave"` en PowerShell).
-
-### 3. Instalar el hook en tu repositorio objetivo
+#### 2. Instalar el hook en tu repositorio objetivo
 
 ```bash
-# En Windows (PowerShell):
-python scripts/install_hook.py --repo-path C:\ruta\a\tu-proyecto
+# Con CLI global:
+gda-install --repo-path /ruta/a/tu-proyecto
 
-# En Linux / macOS:
-python3 scripts/install_hook.py --repo-path /ruta/a/tu-proyecto
+# O con script directo:
+python scripts/install_hook.py --repo-path /ruta/a/tu-proyecto
 ```
 
-### 4. ¡Listo! Haz un commit
-
+#### 3. ¡Listo! Haz un commit en tu proyecto
 ```bash
-cd tu-proyecto
+cd /ruta/a/tu-proyecto
 git add .
 git commit -m "feat: mi primer commit documentado"
-# → git-doc-agent genera docs/changes/2024-XX-XX_XXXXXXXX.md automáticamente
+# → Agente-Documentador genera docs/changes/YYYY-MM-DD_<sha>.md automáticamente
 ```
 
 ---
@@ -153,11 +172,13 @@ doc_commit.py
 ## 📁 Estructura del proyecto
 
 ```
-git-doc-agent/
+Agente-Documentador/
 ├── .gitignore         ← exclusiones de git (claves, temporales, venvs)
+├── pyproject.toml     ← empaquetado pip y comandos CLI (gda-*)
 ├── requirements.txt   ← dependencias de Python (google-genai)
 ├── README.md          ← esta guía
 └── scripts/
+    ├── __init__.py     ← inicializador de módulo Python
     ├── doc_commit.py   ← LLM #1: documenta un commit individual
     ├── doc_project.py  ← LLM #2: consolida la documentación global
     ├── install_hook.py ← instala el git hook post-commit en cualquier repo
