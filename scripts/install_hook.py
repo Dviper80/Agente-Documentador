@@ -22,6 +22,11 @@ HOOK_TEMPLATE = """\
 #!/bin/sh
 # git-doc-agent -- post-commit hook (auto-generated)
 
+# Evitar bucles recursivos si el agente hace amend o commit
+if [ "$GIT_DOC_AGENT_SKIP" = "1" ]; then
+    exit 0
+fi
+
 GDA_SCRIPTS_DIR="{scripts_dir}"
 
 # Cargar API key desde ~/.gda_config (generado por setup_key.py)

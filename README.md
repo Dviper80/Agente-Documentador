@@ -118,6 +118,7 @@ Todas las opciones se controlan mediante **variables de entorno**:
 | Variable | Descripción | Valor por defecto |
 |---|---|---|
 | `GEMINI_API_KEY` | **Requerida.** Tu clave de API de Gemini | — |
+| `GDA_COMMIT_ACTION` | Modo de guardado Git: `amend` (mismo commit), `commit` (commit propio), `stage` o `none` | `amend` |
 | `GDA_COMMIT_MODEL` | Modelo para documentar commits | `gemini-3.5-flash` |
 | `GDA_PROJECT_MODEL` | Modelo para documentación global | `gemini-3.5-flash` |
 | `GDA_CHANGES_DIR` | Subcarpeta de cambios (relativa al repo) | `docs/changes` |

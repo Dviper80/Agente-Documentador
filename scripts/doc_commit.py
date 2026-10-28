@@ -26,6 +26,7 @@ from google import genai
 # ---------------------------------------------------------------------------
 # Configuracion
 # ---------------------------------------------------------------------------
+COMMIT_ACTION = os.getenv("GDA_COMMIT_ACTION", "amend")  # amend | commit | stage | none
 GEMINI_MODEL_COMMIT = os.getenv("GDA_COMMIT_MODEL", "gemini-3.5-flash")
 FALLBACK_MODELS = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-2.5-flash"]
 MAX_RETRIES = int(os.getenv("GDA_MAX_RETRIES", "3"))
@@ -189,27 +190,73 @@ def save_doc(repo_path: str, info: dict, content: str) -> Path:
     return output_file
 
 
-def auto_stage(repo_path: str, file: Path):
+def apply_git_action(repo_path: str, file: Path, action: str, sha: str):
+    """Aplica la accion Git deseada al archivo generado (amend, commit, stage o none)."""
+    if action == "none":
+        return
+
     rel = str(file.relative_to(repo_path)).replace("\\", "/")
-    subprocess.run(["git", "add", rel], cwd=repo_path)
+    subprocess.run(["git", "add", rel], cwd=repo_path, check=True)
+
+    env = os.environ.copy()
+    env["GIT_DOC_AGENT_SKIP"] = "1"
+
+    if action == "amend":
+        try:
+            subprocess.run(
+                ["git", "commit", "--amend", "--no-edit", "--no-verify"],
+                cwd=repo_path,
+                env=env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            print("[git-doc-agent] Documentacion incluida en el mismo commit (amend).")
+        except subprocess.CalledProcessError as e:
+            err_msg = e.stderr.strip() if e.stderr else str(e)
+            print(f"[git-doc-agent] Aviso: No se pudo hacer amend ({err_msg}). Archivo dejado en stage.", file=sys.stderr)
+    elif action == "commit":
+        try:
+            subprocess.run(
+                ["git", "commit", "-m", f"docs: auto-document commit {sha[:8]}", "--no-verify"],
+                cwd=repo_path,
+                env=env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            print(f"[git-doc-agent] Documentacion guardada en su propio commit ({sha[:8]}).")
+        except subprocess.CalledProcessError as e:
+            err_msg = e.stderr.strip() if e.stderr else str(e)
+            print(f"[git-doc-agent] Aviso: No se pudo crear el commit ({err_msg}). Archivo dejado en stage.", file=sys.stderr)
+    elif action == "stage":
+        print("[git-doc-agent] Archivo preparado con git add.")
 
 
 def main():
+    if os.getenv("GIT_DOC_AGENT_SKIP") == "1":
+        sys.exit(0)
+
     parser = argparse.ArgumentParser(description="Documenta un commit con Gemini.")
     parser.add_argument("--repo-path", default=".", help="Ruta al repositorio git.")
     parser.add_argument("--commit", default="HEAD", help="SHA del commit (default: HEAD).")
-    parser.add_argument("--no-stage", action="store_true", help="No hacer git add del archivo.")
+    parser.add_argument(
+        "--action",
+        default=COMMIT_ACTION,
+        choices=["amend", "commit", "stage", "none"],
+        help="Accion Git: amend (en el mismo commit), commit (nuevo commit), stage (solo git add), none.",
+    )
+    parser.add_argument("--no-stage", action="store_true", help="Equivalente a --action none.")
     args = parser.parse_args()
 
+    action = "none" if args.no_stage else args.action
     repo_path = str(Path(args.repo_path).resolve())
     sha = run_git(["rev-parse", args.commit], repo_path)
     info = get_commit_info(sha, repo_path)
     diff = get_diff(sha, repo_path)
     content = generate_doc(info, diff)
     doc_file = save_doc(repo_path, info, content)
-
-    if not args.no_stage:
-        auto_stage(repo_path, doc_file)
+    apply_git_action(repo_path, doc_file, action, sha)
 
 
 if __name__ == "__main__":
