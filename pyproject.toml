@@ -25,3 +25,4 @@ gda-setup = "scripts.setup_key:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["scripts*"]
+

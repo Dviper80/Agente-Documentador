@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 """
 doc_commit.py - LLM #1: Documenta un commit individual.
 
