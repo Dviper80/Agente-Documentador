@@ -31,13 +31,14 @@ GEMINI_API_KEY={api_key}
 """
 
 
-def save_key(api_key: str):
-    CONFIG_FILE.write_text(CONFIG_TEMPLATE.format(api_key=api_key), encoding="utf-8")
+def save_key(api_key: str, dest_path: Path = CONFIG_FILE):
+    api_key_clean = api_key.strip()
+    dest_path.write_text(CONFIG_TEMPLATE.format(api_key=api_key_clean), encoding="utf-8", newline="\n")
     try:
-        CONFIG_FILE.chmod(0o600)  # Solo propietario en Linux/macOS
+        dest_path.chmod(0o600)  # Solo propietario en Linux/macOS
     except Exception:
         pass
-    print(f"[setup_key] API key guardada en: {CONFIG_FILE}")
+    print(f"[setup_key] API key guardada en: {dest_path}")
     print("[setup_key] El hook git la leera automaticamente en cada commit.")
     print()
     print("Verificacion: haz un commit en tu proyecto:")

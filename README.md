@@ -170,6 +170,16 @@ doc_commit.py
 
 ---
 
+## 🧪 Pruebas automatizadas
+
+Para verificar el correcto funcionamiento de todo el sistema (incluyendo la resolución de intérprete en hooks, lectura de claves y generación):
+
+```bash
+python -m unittest discover tests
+```
+
+---
+
 ## 📁 Estructura del proyecto
 
 ```
@@ -178,10 +188,13 @@ Agente-Documentador/
 ├── pyproject.toml     ← empaquetado pip y comandos CLI (gda-*)
 ├── requirements.txt   ← dependencias de Python (google-genai)
 ├── README.md          ← esta guía
-└── scripts/
-    ├── __init__.py     ← inicializador de módulo Python
-    ├── doc_commit.py   ← LLM #1: documenta un commit individual
-    ├── doc_project.py  ← LLM #2: consolida la documentación global
-    ├── install_hook.py ← instala el git hook post-commit en cualquier repo
-    └── setup_key.py    ← guarda la API key de forma persistente y portable
+├── scripts/
+│   ├── __init__.py     ← inicializador de módulo Python
+│   ├── doc_commit.py   ← LLM #1: documenta un commit individual
+│   ├── doc_project.py  ← LLM #2: consolida la documentación global
+│   ├── install_hook.py ← instala el git hook post-commit en cualquier repo
+│   └── setup_key.py    ← guarda la API key de forma persistente y portable
+└── tests/
+    ├── __init__.py     ← paquete de tests
+    └── test_agent.py   ← suite completa de pruebas unitarias y e2e
 ```

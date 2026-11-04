@@ -59,20 +59,45 @@ PROMPT_TEMPLATE = textwrap.dedent("""\
 """)
 
 
-def load_api_key() -> str:
-    """Carga la API key desde la variable de entorno o desde ~/.gda_config."""
+def load_api_key(repo_path: str = None) -> str:
+    """Carga la API key desde la variable de entorno, local o desde ~/.gda_config."""
+    # 1. Variable de entorno directa
     api_key = os.getenv("GEMINI_API_KEY")
-    if api_key:
-        return api_key
+    if api_key and api_key.strip():
+        return api_key.strip()
 
+    # 2. Config local en el repositorio o directorio actual (.gda_config o .env)
+    search_dirs = []
+    if repo_path:
+        search_dirs.append(Path(repo_path))
+    search_dirs.append(Path.cwd())
+
+    for d in search_dirs:
+        for name in [".gda_config", ".env"]:
+            local_file = d / name
+            try:
+                if local_file.is_file():
+                    for line in local_file.read_text(encoding="utf-8").splitlines():
+                        line = line.strip()
+                        if line.startswith("GEMINI_API_KEY="):
+                            val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                            if val:
+                                return val
+            except OSError:
+                pass
+
+    # 3. Fallback: archivo ~/.gda_config (escrito por setup_key.py)
     config_file = Path.home() / ".gda_config"
-    if config_file.exists():
-        for line in config_file.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line.startswith("GEMINI_API_KEY="):
-                value = line.split("=", 1)[1].strip().strip('"').strip("'")
-                if value:
-                    return value
+    try:
+        if config_file.is_file():
+            for line in config_file.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line.startswith("GEMINI_API_KEY="):
+                    val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    if val:
+                        return val
+    except OSError:
+        pass
 
     print(
         "[git-doc-agent] ERROR: GEMINI_API_KEY no encontrada.\n"
@@ -109,11 +134,11 @@ def build_input(entries: list) -> str:
     return combined
 
 
-def generate_project_doc(entries: list) -> str:
+def generate_project_doc(entries: list, repo_path: str = None) -> str:
     # Forzar uso del endpoint de Google AI Studio (no Vertex AI)
     os.environ.pop("GOOGLE_GENAI_USE_VERTEXAI", None)
     os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
-    client = genai.Client(api_key=load_api_key())
+    client = genai.Client(api_key=load_api_key(repo_path))
     combined = build_input(entries)
     prompt = PROMPT_TEMPLATE.format(n=len(entries), entries=combined)
 
@@ -175,7 +200,7 @@ def main():
         print("[git-doc-agent] Nada que consolidar. Saliendo.")
         sys.exit(0)
 
-    content = generate_project_doc(entries)
+    content = generate_project_doc(entries, repo_path)
     save_project_doc(repo_path, content, output_rel)
 
 

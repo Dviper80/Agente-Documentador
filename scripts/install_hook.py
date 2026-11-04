@@ -28,6 +28,7 @@ if [ "$GIT_DOC_AGENT_SKIP" = "1" ]; then
 fi
 
 GDA_SCRIPTS_DIR="{scripts_dir}"
+PYTHON_INSTALL_CMD="{python_exec}"
 
 # Cargar API key desde ~/.gda_config (generado por setup_key.py)
 GDA_CONFIG="$HOME/.gda_config"
@@ -36,6 +37,8 @@ if [ -f "$GDA_CONFIG" ]; then
         case "$key" in
             \\#*|"") continue ;;
         esac
+        key=$(echo "$key" | tr -d '\\r')
+        value=$(echo "$value" | tr -d '\\r')
         export "$key=$value"
     done < "$GDA_CONFIG"
 fi
@@ -43,27 +46,37 @@ fi
 # Resolver la raiz del repo de forma portable en Windows y Linux/macOS
 REPO_ROOT=$(git rev-parse --show-toplevel)
 
-# Detectar interprete de Python disponible
-if command -v python3 >/dev/null 2>&1; then
-    PYTHON_CMD=python3
-elif command -v python >/dev/null 2>&1; then
-    PYTHON_CMD=python
-else
-    echo "[git-doc-agent] ERROR: No se encontro Python en el PATH." >&2
-    exit 1
-fi
+# Funcion para ejecutar Python de forma confiable, evitando stubs invalidos
+run_python() {
+    if [ -n "$PYTHON_INSTALL_CMD" ] && "$PYTHON_INSTALL_CMD" -c "import sys" >/dev/null 2>&1; then
+        "$PYTHON_INSTALL_CMD" "$@"
+        return $?
+    elif python -c "import sys" >/dev/null 2>&1; then
+        python "$@"
+        return $?
+    elif py -3 -c "import sys" >/dev/null 2>&1; then
+        py -3 "$@"
+        return $?
+    elif python3 -c "import sys" >/dev/null 2>&1; then
+        python3 "$@"
+        return $?
+    else
+        echo "[git-doc-agent] ERROR: No se encontro un interprete de Python funcional." >&2
+        return 1
+    fi
+}
 
 # Ejecutar el documentador del commit actual
-"$PYTHON_CMD" "$GDA_SCRIPTS_DIR/doc_commit.py" --repo-path "$REPO_ROOT" --commit HEAD
+run_python "$GDA_SCRIPTS_DIR/doc_commit.py" --repo-path "$REPO_ROOT" --commit HEAD
 
 # Para regenerar la doc global en cada commit, descomenta la siguiente linea:
-# "$PYTHON_CMD" "$GDA_SCRIPTS_DIR/doc_project.py" --repo-path "$REPO_ROOT"
+# run_python "$GDA_SCRIPTS_DIR/doc_project.py" --repo-path "$REPO_ROOT"
 
 exit 0
 """
 
 
-def install(repo_path: str, scripts_dir: str):
+def install(repo_path: str, scripts_dir: str, python_exec: str = sys.executable):
     hook_dir = Path(repo_path) / ".git" / "hooks"
     if not hook_dir.exists():
         print(f"[install_hook] ERROR: No se encontro .git/hooks en {repo_path}")
@@ -79,8 +92,12 @@ def install(repo_path: str, scripts_dir: str):
         hook_file.rename(backup)
         print(f"[install_hook] Hook anterior respaldado -> {backup.name}")
 
-    hook_content = HOOK_TEMPLATE.format(scripts_dir=scripts_dir.replace("\\", "/"))
-    hook_file.write_text(hook_content, encoding="utf-8")
+    hook_content = (
+        HOOK_TEMPLATE
+        .replace("{scripts_dir}", scripts_dir.replace("\\", "/"))
+        .replace("{python_exec}", python_exec.replace("\\", "/"))
+    )
+    hook_file.write_text(hook_content, encoding="utf-8", newline="\n")
     hook_file.chmod(hook_file.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 
     print(f"[install_hook] Hook instalado en: {hook_file}")
@@ -97,7 +114,7 @@ def main():
 
     repo_path = str(Path(args.repo_path).resolve())
     scripts_dir = str(Path(args.scripts_dir or Path(__file__).parent).resolve())
-    install(repo_path, scripts_dir)
+    install(repo_path, scripts_dir, sys.executable)
 
 
 if __name__ == "__main__":
